@@ -1,0 +1,50 @@
+# Render.com deployment manifest
+# Push this repo to GitHub, connect it to Render, and Render reads this file.
+
+services:
+  # ── Express Backend API ──────────────────────────────────────────────────────
+  - type: web
+    name: olatunde-daniel-api
+    runtime: node
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000
+      - key: MONGODB_URI
+        sync: false          # Set this manually in Render dashboard
+      - key: PAYSTACK_SECRET_KEY
+        sync: false          # Set this manually in Render dashboard
+      - key: PAYSTACK_PUBLIC_KEY
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: WHATSAPP_INVITE_URL
+        sync: false
+      - key: ADMIN_NOTIFICATION_EMAIL
+        value: workwithdan6@gmail.com
+
+  # ── Vite Frontend Static Site ───────────────────────────────────────────────
+  - type: web
+    name: olatunde-daniel-web
+    runtime: static
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: olatunde-daniel-api
+          property: host
+      - key: VITE_PAYSTACK_PUBLIC_KEY
+        sync: false
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
