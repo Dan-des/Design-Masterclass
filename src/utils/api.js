@@ -4,11 +4,7 @@
  * just fetch wrappers with error normalisation.
  */
 
-const BASE_URL = import.meta.env.VITE_API_URL || (
-  typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
-    ? `${window.location.protocol}//${window.location.hostname}:4000`
-    : 'http://localhost:4000'
-);
+const BASE_URL = import.meta.env.VITE_API_URL || '';
 
 /**
  * Internal fetch helper — adds content-type, handles non-OK responses,
