@@ -449,98 +449,98 @@ function buildAdminEmailHtml({
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>New Student Enrolled</title>
 </head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif; background: #0a0a0a; color: #ffffff; margin: 0; padding: 16px;">
-  <div style="max-width: 520px; margin: 0 auto; background: #111111; border: 1px solid #282828; border-radius: 8px; padding: 20px;">
+<body style="font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif; background: #0a0a0a; color: #ffffff; margin: 0; padding: 10px;">
+  <div style="max-width: 480px; width: 100%; margin: 0 auto; background: #111111; border: 1px solid #282828; border-radius: 8px; padding: 14px; box-sizing: border-box;">
     
     <!-- Admin Header -->
-    <div style="border-bottom: 1px solid #222222; padding-bottom: 12px; margin-bottom: 16px;">
-      <h2 style="color: #facc15; margin: 0 0 4px; font-size: 16px; letter-spacing: 0.02em;">New Student Enrolled</h2>
-      <p style="color: #888888; font-size: 11.5px; margin: 0;">Verified purchase completed via Paystack.</p>
+    <div style="border-bottom: 1px solid #222222; padding-bottom: 10px; margin-bottom: 12px;">
+      <h2 style="color: #facc15; margin: 0 0 3px; font-size: 15px; letter-spacing: 0.02em;">New Student Enrolled</h2>
+      <p style="color: #888888; font-size: 11px; margin: 0;">Verified purchase completed via Paystack.</p>
     </div>
 
     <!-- Student Information Structured Card -->
-    <div style="background: #141414; border: 1px solid #262626; border-radius: 6px; overflow: hidden; margin-bottom: 16px;">
-      <div style="background: #1a1a1a; padding: 8px 14px; font-size: 10.5px; text-transform: uppercase; font-family: monospace; color: #888888; font-weight: bold; letter-spacing: 0.05em; border-bottom: 1px solid #222222;">
+    <div style="background: #141414; border: 1px solid #262626; border-radius: 6px; overflow: hidden; margin-bottom: 14px;">
+      <div style="background: #1a1a1a; padding: 7px 10px; font-size: 10px; text-transform: uppercase; font-family: monospace; color: #888888; font-weight: bold; letter-spacing: 0.05em; border-bottom: 1px solid #222222;">
         Student Checkout Credentials
       </div>
 
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width: 100%; border-collapse: collapse;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width: 100%; border-collapse: collapse; table-layout: fixed;">
         <tr>
-          <td style="padding: 10px 14px; border-bottom: 1px solid #222222; color: #888888; font-size: 11.5px; width: 34%; white-space: nowrap;">
+          <td style="padding: 8px 10px; border-bottom: 1px solid #222222; color: #888888; font-size: 11px; width: 95px; white-space: nowrap; vertical-align: middle;">
             Student Name
           </td>
-          <td style="padding: 10px 14px; border-bottom: 1px solid #222222; color: #ffffff; font-size: 12.5px; font-weight: bold;">
+          <td style="padding: 8px 10px; border-bottom: 1px solid #222222; color: #ffffff; font-size: 12px; font-weight: bold; word-break: break-word;">
             ${toName}
           </td>
         </tr>
         <tr>
-          <td style="padding: 10px 14px; border-bottom: 1px solid #222222; color: #888888; font-size: 11.5px; white-space: nowrap;">
+          <td style="padding: 8px 10px; border-bottom: 1px solid #222222; color: #888888; font-size: 11px; white-space: nowrap; vertical-align: middle;">
             Email
           </td>
-          <td style="padding: 10px 14px; border-bottom: 1px solid #222222; color: #38bdf8; font-size: 12px; font-weight: bold;">
+          <td style="padding: 8px 10px; border-bottom: 1px solid #222222; color: #38bdf8; font-size: 11.5px; font-weight: bold; word-break: break-all;">
             <a href="mailto:${toEmail}" style="color: #38bdf8; text-decoration: none;">${toEmail}</a>
           </td>
         </tr>
         <tr>
-          <td style="padding: 10px 14px; border-bottom: 1px solid #222222; color: #888888; font-size: 11.5px; white-space: nowrap;">
+          <td style="padding: 8px 10px; border-bottom: 1px solid #222222; color: #888888; font-size: 11px; white-space: nowrap; vertical-align: middle;">
             WhatsApp
           </td>
-          <td style="padding: 10px 14px; border-bottom: 1px solid #222222; color: #22c55e; font-size: 12px; font-weight: bold;">
-            <a href="https://wa.me/${whatsappClean}" style="color: #22c55e; text-decoration: none;">${whatsapp} &rarr; Chat on WhatsApp</a>
+          <td style="padding: 8px 10px; border-bottom: 1px solid #222222; color: #22c55e; font-size: 11.5px; font-weight: bold; word-break: break-word;">
+            <a href="https://wa.me/${whatsappClean}" style="color: #22c55e; text-decoration: underline;">${whatsapp} (Chat &rarr;)</a>
           </td>
         </tr>
         <tr>
-          <td style="padding: 10px 14px; border-bottom: 1px solid #222222; color: #888888; font-size: 11.5px; white-space: nowrap;">
+          <td style="padding: 8px 10px; border-bottom: 1px solid #222222; color: #888888; font-size: 11px; white-space: nowrap; vertical-align: middle;">
             Tier Enrolled
           </td>
-          <td style="padding: 10px 14px; border-bottom: 1px solid #222222; color: #facc15; font-size: 12.5px; font-weight: bold;">
+          <td style="padding: 8px 10px; border-bottom: 1px solid #222222; color: #facc15; font-size: 12px; font-weight: bold; word-break: break-word;">
             ${tierName}
           </td>
         </tr>
         <tr>
-          <td style="padding: 10px 14px; border-bottom: 1px solid #222222; color: #888888; font-size: 11.5px; vertical-align: top; white-space: nowrap;">
+          <td style="padding: 8px 10px; border-bottom: 1px solid #222222; color: #888888; font-size: 11px; vertical-align: top; white-space: nowrap;">
             Software Scope
           </td>
-          <td style="padding: 10px 14px; border-bottom: 1px solid #222222; color: #d4d4d4; font-size: 11.5px; line-height: 1.45;">
+          <td style="padding: 8px 10px; border-bottom: 1px solid #222222; color: #d4d4d4; font-size: 11px; line-height: 1.45; word-break: break-word;">
             ${softwareScope}
           </td>
         </tr>
         <tr>
-          <td style="padding: 10px 14px; border-bottom: 1px solid #222222; color: #888888; font-size: 11.5px; white-space: nowrap;">
+          <td style="padding: 8px 10px; border-bottom: 1px solid #222222; color: #888888; font-size: 11px; white-space: nowrap; vertical-align: middle;">
             Amount Paid
           </td>
-          <td style="padding: 10px 14px; border-bottom: 1px solid #222222; color: #4ade80; font-size: 14px; font-weight: bold; font-family: 'SF Mono', Menlo, Consolas, monospace;">
+          <td style="padding: 8px 10px; border-bottom: 1px solid #222222; color: #4ade80; font-size: 13.5px; font-weight: bold; font-family: 'SF Mono', Menlo, Consolas, monospace;">
             ₦${amountPaid.toLocaleString()} NGN
           </td>
         </tr>
         <tr>
-          <td style="padding: 10px 14px; border-bottom: 1px solid #222222; color: #888888; font-size: 11.5px; white-space: nowrap;">
+          <td style="padding: 8px 10px; border-bottom: 1px solid #222222; color: #888888; font-size: 11px; white-space: nowrap; vertical-align: middle;">
             Transaction ID
           </td>
-          <td style="padding: 10px 14px; border-bottom: 1px solid #222222; color: #cccccc; font-size: 11.5px; font-family: 'SF Mono', Menlo, Consolas, monospace;">
+          <td style="padding: 8px 10px; border-bottom: 1px solid #222222; color: #cccccc; font-size: 11px; font-family: 'SF Mono', Menlo, Consolas, monospace; word-break: break-all;">
             ${transactionId}
           </td>
         </tr>
         <tr>
-          <td style="padding: 10px 14px; border-bottom: 1px solid #222222; color: #888888; font-size: 11.5px; white-space: nowrap;">
+          <td style="padding: 8px 10px; border-bottom: 1px solid #222222; color: #888888; font-size: 11px; white-space: nowrap; vertical-align: middle;">
             Receipt No
           </td>
-          <td style="padding: 10px 14px; border-bottom: 1px solid #222222; color: #cccccc; font-size: 11.5px; font-family: 'SF Mono', Menlo, Consolas, monospace;">
+          <td style="padding: 8px 10px; border-bottom: 1px solid #222222; color: #cccccc; font-size: 11px; font-family: 'SF Mono', Menlo, Consolas, monospace;">
             ${receiptNumber}
           </td>
         </tr>
         <tr>
-          <td style="padding: 10px 14px; color: #888888; font-size: 11.5px; white-space: nowrap;">
+          <td style="padding: 8px 10px; color: #888888; font-size: 11px; white-space: nowrap; vertical-align: middle;">
             Date &amp; Time
           </td>
-          <td style="padding: 10px 14px; color: #cccccc; font-size: 11.5px;">
+          <td style="padding: 8px 10px; color: #cccccc; font-size: 11px; word-break: break-word;">
             ${formattedDate}
           </td>
         </tr>
       </table>
     </div>
 
-    <div style="text-align: center; border-top: 1px solid #1f1f1f; padding-top: 12px; font-size: 10px; color: #555555;">
+    <div style="text-align: center; border-top: 1px solid #1f1f1f; padding-top: 10px; font-size: 9.5px; color: #555555;">
       Olatunde Daniel Masterclass Administration &bull; Automated Instant Alert
     </div>
   </div>
