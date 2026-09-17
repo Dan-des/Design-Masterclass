@@ -18,7 +18,8 @@ import {
   findEnrollmentByEmail,
   findEnrollmentByPhone,
   findEnrollmentByReference,
-  findEnrollmentByTransactionId
+  findEnrollmentByTransactionId,
+  findEnrollmentByReceiptNumber
 } from '../services/database.js';
 import { sendEnrollmentConfirmation } from '../services/email.js';
 import {
@@ -324,7 +325,311 @@ async function handleVerify(req, res) {
   }
 }
 
+/**
+ * Serves a printable HTML receipt by receiptNumber
+ */
+async function handleReceiptView(req, res) {
+  try {
+    const { receiptNumber } = req.params;
+    const enrollment = await findEnrollmentByReceiptNumber(receiptNumber);
+
+    if (!enrollment) {
+      return res.status(404).send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8" />
+          <title>Receipt Not Found</title>
+          <style>body { font-family: Arial, sans-serif; text-align: center; padding: 60px 20px; background: #0a0a0a; color: #fff; }</style>
+        </head>
+        <body>
+          <h2 style="color: #f87171;">Receipt Not Found</h2>
+          <p style="color: #888;">We could not locate an enrollment record for receipt <strong>${receiptNumber}</strong>.</p>
+        </body>
+        </html>
+      `);
+    }
+
+    const formattedDate = new Date(enrollment.paidAt || enrollment.createdAt).toLocaleDateString('en-NG', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    const tier = resolveTier(enrollment.tierId) || {
+      name: enrollment.tierName,
+      softwareScope: 'Full Masterclass Curriculum',
+      perks: ['Full Masterclass Access', 'VIP Mentorship WhatsApp Group Access', 'Raw Project Assets Vault']
+    };
+
+    const perksHtml = (tier.perks || [])
+      .map((p) => `<li style="padding: 3px 0;">${p}</li>`)
+      .join('');
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Receipt ${enrollment.receiptNumber} - Olatunde Daniel Masterclass</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #f4f4f5;
+    color: #111;
+    margin: 0;
+    padding: 24px;
+    display: flex;
+    justify-content: center;
+  }
+  .receipt-wrapper {
+    width: 100%;
+    max-width: 600px;
+  }
+  .receipt-paper {
+    background: #fff;
+    padding: 32px 28px;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+    border: 1px solid #e4e4e7;
+  }
+  .no-print {
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .btn-print {
+    background: #000;
+    color: #fff;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    letter-spacing: 0.02em;
+  }
+  .btn-print:hover { background: #222; }
+  .header {
+    border-bottom: 2px solid #111;
+    padding-bottom: 14px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+  .header h1 {
+    margin: 0 0 3px;
+    font-size: 17px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 800;
+  }
+  .header p {
+    margin: 0;
+    font-size: 11px;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .status-badge {
+    display: inline-block;
+    background: #111;
+    color: #facc15;
+    font-family: monospace;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+  }
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .card {
+    border: 1px solid #e4e4e7;
+    background: #fafafa;
+    padding: 12px;
+    border-radius: 6px;
+  }
+  .card-title {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+    color: #71717a;
+    margin-bottom: 6px;
+    font-family: monospace;
+  }
+  .info-row {
+    font-size: 11px;
+    margin-bottom: 4px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .info-row span:first-child { color: #71717a; }
+  .info-row span:last-child { font-weight: 600; color: #111; text-align: right; }
+  .table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    font-size: 11px;
+  }
+  .table th {
+    background: #f4f4f5;
+    text-align: left;
+    padding: 7px 8px;
+    border-bottom: 1px solid #111;
+    font-family: monospace;
+    text-transform: uppercase;
+    font-size: 10px;
+  }
+  .table td {
+    padding: 8px;
+    border-bottom: 1px solid #e4e4e7;
+  }
+  .table tr.total-row td {
+    border-top: 2px solid #111;
+    border-bottom: none;
+    font-weight: 800;
+    font-size: 13px;
+  }
+  .footer {
+    border-top: 1px solid #e4e4e7;
+    padding-top: 14px;
+    text-align: center;
+    font-size: 10px;
+    color: #71717a;
+  }
+  @media print {
+    body { background: #fff; padding: 0; }
+    .receipt-paper { box-shadow: none; border: none; max-width: 100%; padding: 0; }
+    .no-print { display: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="receipt-wrapper">
+  <div class="no-print">
+    <span style="font-size: 12px; color: #555;">Official Masterclass Receipt</span>
+    <button onclick="window.print()" class="btn-print">
+      Print / Save PDF
+    </button>
+  </div>
+  <div class="receipt-paper">
+    <div class="header">
+      <div>
+        <h1>Olatunde Daniel</h1>
+        <p>Graphics Design Masterclass &bull; Official Payment Receipt</p>
+      </div>
+      <div style="text-align: right;">
+        <span class="status-badge">Paid &amp; Verified</span>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">Student Information</div>
+        <div class="info-row">
+          <span>Full Name:</span>
+          <span>${enrollment.fullName}</span>
+        </div>
+        <div class="info-row">
+          <span>Email:</span>
+          <span>${enrollment.email}</span>
+        </div>
+        <div class="info-row">
+          <span>WhatsApp:</span>
+          <span>${enrollment.whatsapp}</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Transaction Audit</div>
+        <div class="info-row">
+          <span>Receipt No:</span>
+          <span style="font-family: monospace;">${enrollment.receiptNumber}</span>
+        </div>
+        <div class="info-row">
+          <span>Transaction ID:</span>
+          <span style="font-family: monospace;">${enrollment.transactionId}</span>
+        </div>
+        <div class="info-row">
+          <span>Date &amp; Time:</span>
+          <span>${formattedDate}</span>
+        </div>
+        <div class="info-row">
+          <span>Gateway:</span>
+          <span>Paystack Verified</span>
+        </div>
+      </div>
+    </div>
+
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Item Description</th>
+          <th>Software Scope</th>
+          <th style="text-align: right;">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            <strong>${enrollment.tierName}</strong><br />
+            <span style="font-size: 10px; color: #71717a;">Complete Masterclass Cohort Access</span>
+          </td>
+          <td style="color: #555;">${tier.softwareScope || 'Full Masterclass Curriculum'}</td>
+          <td style="text-align: right; font-family: monospace; font-weight: 700;">₦${enrollment.amountPaid.toLocaleString()} NGN</td>
+        </tr>
+        <tr class="total-row">
+          <td colspan="2" style="text-transform: uppercase; font-family: monospace;">Total Amount Paid</td>
+          <td style="text-align: right; font-family: monospace; font-size: 13px; color: #000;">₦${enrollment.amountPaid.toLocaleString()} NGN</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div style="background: #fafafa; border: 1px solid #e4e4e7; border-radius: 6px; padding: 10px 12px; margin-bottom: 20px;">
+      <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; font-family: monospace; color: #111; margin-bottom: 5px;">
+        Curriculum &amp; Community Perks Included:
+      </div>
+      <ul style="margin: 0; padding-left: 18px; font-size: 11px; color: #555; line-height: 1.5;">
+        ${perksHtml}
+      </ul>
+    </div>
+
+    <div class="footer">
+      Olatunde Daniel Graphics Design Masterclass &bull; Verified Digital Receipt &bull; ${enrollment.receiptNumber}
+    </div>
+  </div>
+</div>
+<script>
+  if (new URLSearchParams(window.location.search).get('print') === 'true') {
+    window.addEventListener('DOMContentLoaded', () => setTimeout(() => window.print(), 250));
+  }
+</script>
+</body>
+</html>`;
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    return res.send(html);
+  } catch (err) {
+    console.error('[Receipt View] Error:', err.message);
+    return res.status(500).send('Internal server error loading receipt.');
+  }
+}
+
+router.get('/receipt/:receiptNumber', handleReceiptView);
 router.get('/verify/:reference', handleVerify);
 router.get('/verify-session/:sessionId', handleVerify);
 
 export default router;
+

@@ -133,6 +133,20 @@ export async function findEnrollmentByTransactionId(transactionId) {
   return memoryEnrollments.find(e => e.transactionId === transactionId) || null;
 }
 
+export async function findEnrollmentByReceiptNumber(receiptNumber) {
+  if (mongoose.connection.readyState === 1) {
+    return Enrollment.findOne({ receiptNumber }).lean();
+  }
+  return memoryEnrollments.find(e => e.receiptNumber === receiptNumber) || null;
+}
+
+export async function getAllEnrollments() {
+  if (mongoose.connection.readyState === 1) {
+    return Enrollment.find({}).sort({ createdAt: 1 }).lean();
+  }
+  return memoryEnrollments;
+}
+
 // ── Support Ticket Queries ─────────────────────────────────────────────────────
 
 export async function insertSupportTicket(data) {
@@ -144,3 +158,6 @@ export async function insertSupportTicket(data) {
   memoryTickets.push(item);
   return item;
 }
+
+export { Enrollment, SupportTicket };
+

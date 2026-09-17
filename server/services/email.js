@@ -11,8 +11,16 @@
 import { Resend } from 'resend';
 import nodemailer from 'nodemailer';
 
-const FROM_EMAIL = process.env.EMAIL_FROM || 'onboarding@resend.dev';
-const ADMIN_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL || 'workwithdan6@gmail.com';
+const DEFAULT_SENDER = 'Olatunde Daniel <no-reply@mail.olatundedaniel.name.ng>';
+
+function getSenderAddress() {
+  const from = process.env.EMAIL_FROM || DEFAULT_SENDER;
+  return from.includes('<') ? from : `Olatunde Daniel <${from}>`;
+}
+
+function getAdminEmail() {
+  return process.env.ADMIN_NOTIFICATION_EMAIL || 'workwithdan6@gmail.com';
+}
 
 /**
  * Returns an active email client (Resend or Nodemailer) or null.
@@ -66,7 +74,7 @@ async function sendMail({ from, to, subject, html }) {
     const res = await driver.client.emails.send({
       from,
       to: Array.isArray(to) ? to : [to],
-      reply_to: ADMIN_EMAIL,
+      reply_to: getAdminEmail(),
       subject,
       html
     });
@@ -81,7 +89,7 @@ async function sendMail({ from, to, subject, html }) {
     const info = await driver.client.sendMail({
       from,
       to: Array.isArray(to) ? to.join(', ') : to,
-      replyTo: ADMIN_EMAIL,
+      replyTo: getAdminEmail(),
       subject,
       html
     });
@@ -147,9 +155,8 @@ export async function sendEnrollmentConfirmation({
     formattedDate
   });
 
-  const senderAddress = FROM_EMAIL.includes('<')
-    ? FROM_EMAIL
-    : `Olatunde Daniel <${FROM_EMAIL}>`;
+  const senderAddress = getSenderAddress();
+  const adminEmail = getAdminEmail();
 
   try {
     // Send to student
@@ -162,14 +169,14 @@ export async function sendEnrollmentConfirmation({
     console.info(`[Email Dispatcher] Student confirmation dispatched to ${toEmail} (${studentResult.method || studentResult.driver})`);
 
     // Send to Daniel (workwithdan6@gmail.com)
-    if (ADMIN_EMAIL && ADMIN_EMAIL.toLowerCase() !== toEmail.toLowerCase()) {
+    if (adminEmail && adminEmail.toLowerCase() !== toEmail.toLowerCase()) {
       await sendMail({
         from: senderAddress,
-        to: ADMIN_EMAIL,
+        to: adminEmail,
         subject: adminSubject,
         html: adminHtml
       }).catch((e) => console.warn('[Email Dispatcher] Admin alert failed:', e.message));
-      console.info(`[Email Dispatcher] Admin alert dispatched to ${ADMIN_EMAIL}`);
+      console.info(`[Email Dispatcher] Admin alert dispatched to ${adminEmail}`);
     }
 
     return { success: true };
@@ -208,9 +215,8 @@ export async function sendSupportAcknowledgment({ toEmail, toName, ticketId, mes
     </div>
   `;
 
-  const senderAddress = FROM_EMAIL.includes('<')
-    ? FROM_EMAIL
-    : `Olatunde Daniel Support <${FROM_EMAIL}>`;
+  const senderAddress = getSenderAddress();
+  const adminEmail = getAdminEmail();
 
   try {
     await sendMail({
@@ -220,10 +226,10 @@ export async function sendSupportAcknowledgment({ toEmail, toName, ticketId, mes
       html: studentHtml
     });
 
-    if (ADMIN_EMAIL) {
+    if (adminEmail) {
       await sendMail({
         from: senderAddress,
-        to: ADMIN_EMAIL,
+        to: adminEmail,
         subject: adminSubject,
         html: adminHtml
       }).catch((e) => console.warn('[Email Dispatcher] Admin ticket alert failed:', e.message));
@@ -250,8 +256,11 @@ function buildStudentEmailHtml({
   whatsappInviteUrl
 }) {
   const perksListHtml = perks.length > 0
-    ? perks.map((p) => `<li style="padding: 4px 0; color: #d4d4d4;">${p}</li>`).join('')
-    : '<li style="padding: 4px 0; color: #d4d4d4;">Full Masterclass Access &amp; Curriculum Materials</li>';
+    ? perks.map((p) => `<li style="padding: 2px 0; color: #ccc;">${p}</li>`).join('')
+    : '<li style="padding: 2px 0; color: #ccc;">Full Masterclass Access &amp; Curriculum Materials</li>';
+
+  const backendBase = process.env.BACKEND_URL || (process.env.NODE_ENV === 'production' ? 'https://olatunde-daniel-api.onrender.com' : 'http://localhost:4000');
+  const receiptPrintUrl = `${backendBase}/api/payment/receipt/${encodeURIComponent(receiptNumber)}?print=true`;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -260,25 +269,26 @@ function buildStudentEmailHtml({
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Enrollment Confirmed</title>
 <style>
-  body { font-family: Arial, sans-serif; background: #0a0a0a; color: #e5e5e5; margin: 0; padding: 0; }
-  .container { max-width: 600px; margin: 30px auto; background: #111; border-radius: 12px; overflow: hidden; border: 1px solid #222; }
-  .header { background: #f5f0e8; padding: 28px; text-align: center; }
-  .header h1 { color: #0a0a0a; font-size: 22px; margin: 0 0 4px; letter-spacing: 0.05em; font-weight: 800; }
-  .header p { color: #555; margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
-  .body { padding: 32px 28px; }
-  .greeting { color: #facc15; font-size: 20px; font-weight: bold; margin-top: 0; }
-  .appreciation { color: #f5f5f5; font-size: 15px; line-height: 1.65; background: #1a1a1a; padding: 18px; border-radius: 8px; border-left: 4px solid #facc15; margin: 20px 0; }
-  .receipt-box { background: #171717; border: 1px solid #282828; border-radius: 8px; padding: 20px; margin: 24px 0; }
-  .receipt-title { font-size: 12px; font-family: monospace; text-transform: uppercase; color: #888; margin-bottom: 12px; font-weight: bold; }
-  .receipt-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #222; font-size: 13px; }
+  body { font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif; background: #0a0a0a; color: #d4d4d4; margin: 0; padding: 0; }
+  .container { max-width: 520px; margin: 20px auto; background: #111; border-radius: 8px; overflow: hidden; border: 1px solid #222; }
+  .header { background: #f5f0e8; padding: 18px 20px; text-align: center; }
+  .header h1 { color: #0a0a0a; font-size: 16px; margin: 0 0 2px; letter-spacing: 0.04em; font-weight: 800; text-transform: uppercase; }
+  .header p { color: #555; margin: 0; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
+  .body { padding: 22px 20px; }
+  .greeting { color: #facc15; font-size: 15px; font-weight: 700; margin-top: 0; margin-bottom: 8px; }
+  .appreciation { color: #e5e5e5; font-size: 12.5px; line-height: 1.55; background: #181818; padding: 12px 14px; border-radius: 6px; border-left: 3px solid #facc15; margin: 14px 0; }
+  .receipt-box { background: #161616; border: 1px solid #282828; border-radius: 6px; padding: 14px; margin: 16px 0; }
+  .receipt-title { font-size: 10.5px; font-family: monospace; text-transform: uppercase; color: #888; margin-bottom: 8px; font-weight: 700; letter-spacing: 0.04em; }
+  .receipt-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #222; font-size: 11.5px; }
   .receipt-row:last-child { border-bottom: none; }
   .receipt-label { color: #888; }
-  .receipt-value { color: #fff; font-weight: bold; font-family: monospace; }
-  .perks-box { background: #171717; border: 1px solid #282828; border-radius: 8px; padding: 20px; margin: 24px 0; }
-  .perks-title { font-size: 13px; color: #facc15; text-transform: uppercase; font-weight: bold; margin: 0 0 10px; }
-  .scope-badge { display: inline-block; background: #222; color: #e5e5e5; font-size: 12px; padding: 4px 10px; border-radius: 4px; margin-bottom: 12px; }
-  .cta-btn { display: block; text-align: center; background: #25d366; color: #000; text-decoration: none; padding: 15px 24px; border-radius: 8px; font-weight: 800; font-size: 15px; margin: 28px 0 16px; letter-spacing: 0.02em; }
-  .footer { padding: 20px 28px; border-top: 1px solid #1f1f1f; font-size: 11px; color: #555; text-align: center; }
+  .receipt-value { color: #fff; font-weight: 600; font-family: monospace; }
+  .perks-box { background: #161616; border: 1px solid #282828; border-radius: 6px; padding: 14px; margin: 16px 0; }
+  .perks-title { font-size: 11.5px; color: #facc15; text-transform: uppercase; font-weight: 700; margin: 0 0 8px; letter-spacing: 0.02em; }
+  .scope-badge { display: inline-block; background: #222; color: #e5e5e5; font-size: 10.5px; padding: 2px 7px; border-radius: 3px; margin-bottom: 8px; }
+  .cta-btn { display: block; text-align: center; background: #25d366; color: #000; text-decoration: none; padding: 11px 18px; border-radius: 6px; font-weight: 700; font-size: 13px; margin: 18px 0 14px; letter-spacing: 0.02em; }
+  .print-btn { display: inline-block; background: #222; color: #facc15; text-decoration: none; padding: 7px 14px; border-radius: 4px; font-size: 11px; font-weight: 600; border: 1px solid #3a3a3a; letter-spacing: 0.02em; }
+  .footer { padding: 14px 20px; border-top: 1px solid #1f1f1f; font-size: 10px; color: #555; text-align: center; }
 </style>
 </head>
 <body>
@@ -326,25 +336,32 @@ function buildStudentEmailHtml({
         <span class="receipt-label">Date &amp; Time</span>
         <span class="receipt-value">${formattedDate}</span>
       </div>
+
+      <!-- Print Receipt Action -->
+      <div style="text-align: center; margin-top: 12px; padding-top: 10px; border-top: 1px dashed #2a2a2a;">
+        <a href="${receiptPrintUrl}" target="_blank" rel="noopener noreferrer" class="print-btn">
+          Print / Download Official Receipt
+        </a>
+      </div>
     </div>
 
     <!-- Purchased Tier Details & Perks -->
     <div class="perks-box">
       <div class="perks-title">Your Enrolled Tier: ${tierName}</div>
       <div class="scope-badge">Software Scope: ${softwareScope}</div>
-      <div style="font-size: 12px; color: #888; margin-bottom: 8px;">Included Curriculum &amp; Assets:</div>
-      <ul style="margin: 0; padding-left: 20px; font-size: 13px; line-height: 1.6;">
+      <div style="font-size: 11px; color: #888; margin-bottom: 6px;">Included Curriculum &amp; Assets:</div>
+      <ul style="margin: 0; padding-left: 18px; font-size: 11.5px; line-height: 1.55;">
         ${perksListHtml}
       </ul>
     </div>
 
-    <p style="font-size: 12px; color: #777; line-height: 1.5; margin-top: 24px;">
+    <p style="font-size: 11px; color: #777; line-height: 1.5; margin-top: 18px; margin-bottom: 0;">
       Keep this email as proof of your enrollment. If you need any assistance, reach out directly or reply to this message.
     </p>
   </div>
   <div class="footer">
-    <p>Olatunde Daniel Graphics Design Masterclass &mdash; &copy;2026</p>
-    <p>This is an automated purchase and access confirmation.</p>
+    <p style="margin: 0 0 2px;">Olatunde Daniel Graphics Design Masterclass &bull; &copy;2026</p>
+    <p style="margin: 0;">Automated enrollment confirmation &bull; Verified Transaction</p>
   </div>
 </div>
 </body>
@@ -368,65 +385,66 @@ function buildAdminEmailHtml({
 <meta charset="UTF-8" />
 <title>New Student Enrolled</title>
 </head>
-<body style="font-family: Arial, sans-serif; background: #0a0a0a; color: #fff; margin: 0; padding: 20px;">
-  <div style="max-width: 600px; margin: 0 auto; background: #111; border: 1px solid #2a2a2a; border-radius: 10px; padding: 24px;">
-    <div style="border-bottom: 1px solid #222; padding-bottom: 16px; margin-bottom: 20px;">
-      <h2 style="color: #facc15; margin: 0 0 6px; font-size: 20px;">New Masterclass Student Enrolled!</h2>
-      <p style="color: #888; font-size: 13px; margin: 0;">A student just completed payment via Paystack.</p>
+<body style="font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif; background: #0a0a0a; color: #fff; margin: 0; padding: 16px;">
+  <div style="max-width: 520px; margin: 0 auto; background: #111; border: 1px solid #282828; border-radius: 8px; padding: 20px;">
+    <div style="border-bottom: 1px solid #222; padding-bottom: 12px; margin-bottom: 16px;">
+      <h2 style="color: #facc15; margin: 0 0 4px; font-size: 16px; letter-spacing: 0.02em;">New Student Enrolled</h2>
+      <p style="color: #888; font-size: 11.5px; margin: 0;">Completed checkout &mdash; payment verified by Paystack.</p>
     </div>
 
-    <div style="background: #181818; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
-      <h3 style="color: #fff; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0; margin-bottom: 14px; font-family: monospace;">
-        Student Form Information
+    <div style="background: #161616; border-radius: 6px; padding: 14px; margin-bottom: 16px; border: 1px solid #222;">
+      <h3 style="color: #aaa; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0; margin-bottom: 10px; font-family: monospace;">
+        Student Form Details
       </h3>
-      <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+      <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
         <tr>
-          <td style="padding: 6px 0; color: #888; width: 140px;">Full Name:</td>
-          <td style="padding: 6px 0; color: #fff; font-weight: bold;">${toName}</td>
+          <td style="padding: 5px 0; color: #888; width: 130px;">Full Name:</td>
+          <td style="padding: 5px 0; color: #fff; font-weight: 600;">${toName}</td>
         </tr>
         <tr>
-          <td style="padding: 6px 0; color: #888;">Email:</td>
-          <td style="padding: 6px 0; color: #38bdf8; font-weight: bold;">
+          <td style="padding: 5px 0; color: #888;">Email:</td>
+          <td style="padding: 5px 0; color: #38bdf8; font-weight: 600;">
             <a href="mailto:${toEmail}" style="color: #38bdf8; text-decoration: none;">${toEmail}</a>
           </td>
         </tr>
         <tr>
-          <td style="padding: 6px 0; color: #888;">WhatsApp Phone:</td>
-          <td style="padding: 6px 0; color: #22c55e; font-weight: bold;">
+          <td style="padding: 5px 0; color: #888;">WhatsApp Phone:</td>
+          <td style="padding: 5px 0; color: #22c55e; font-weight: 600;">
             <a href="https://wa.me/${whatsapp.replace(/[^0-9]/g, '')}" style="color: #22c55e; text-decoration: none;">${whatsapp}</a>
           </td>
         </tr>
         <tr>
-          <td style="padding: 6px 0; color: #888;">Tier Purchased:</td>
-          <td style="padding: 6px 0; color: #facc15; font-weight: bold;">${tierName}</td>
+          <td style="padding: 5px 0; color: #888;">Tier Purchased:</td>
+          <td style="padding: 5px 0; color: #facc15; font-weight: 600;">${tierName}</td>
         </tr>
         <tr>
-          <td style="padding: 6px 0; color: #888;">Software Scope:</td>
-          <td style="padding: 6px 0; color: #ccc;">${softwareScope}</td>
+          <td style="padding: 5px 0; color: #888;">Software Scope:</td>
+          <td style="padding: 5px 0; color: #ccc;">${softwareScope}</td>
         </tr>
         <tr>
-          <td style="padding: 6px 0; color: #888;">Amount Paid:</td>
-          <td style="padding: 6px 0; color: #4ade80; font-weight: bold; font-family: monospace; font-size: 16px;">₦${amountPaid.toLocaleString()}</td>
+          <td style="padding: 5px 0; color: #888;">Amount Paid:</td>
+          <td style="padding: 5px 0; color: #4ade80; font-weight: 700; font-family: monospace; font-size: 14px;">₦${amountPaid.toLocaleString()} NGN</td>
         </tr>
         <tr>
-          <td style="padding: 6px 0; color: #888;">Transaction ID:</td>
-          <td style="padding: 6px 0; color: #aaa; font-family: monospace;">${transactionId}</td>
+          <td style="padding: 5px 0; color: #888;">Transaction ID:</td>
+          <td style="padding: 5px 0; color: #aaa; font-family: monospace;">${transactionId}</td>
         </tr>
         <tr>
-          <td style="padding: 6px 0; color: #888;">Receipt Number:</td>
-          <td style="padding: 6px 0; color: #aaa; font-family: monospace;">${receiptNumber}</td>
+          <td style="padding: 5px 0; color: #888;">Receipt Number:</td>
+          <td style="padding: 5px 0; color: #aaa; font-family: monospace;">${receiptNumber}</td>
         </tr>
         <tr>
-          <td style="padding: 6px 0; color: #888;">Date &amp; Time:</td>
-          <td style="padding: 6px 0; color: #aaa;">${formattedDate}</td>
+          <td style="padding: 5px 0; color: #888;">Date &amp; Time:</td>
+          <td style="padding: 5px 0; color: #aaa;">${formattedDate}</td>
         </tr>
       </table>
     </div>
 
-    <div style="text-align: center; border-top: 1px solid #1f1f1f; padding-top: 16px; font-size: 12px; color: #555;">
-      Olatunde Daniel Masterclass Administration &mdash; Live Notification
+    <div style="text-align: center; border-top: 1px solid #1f1f1f; padding-top: 12px; font-size: 10px; color: #555;">
+      Olatunde Daniel Masterclass Administration &bull; Automated Instant Alert
     </div>
   </div>
 </body>
 </html>`;
 }
+
