@@ -25,7 +25,7 @@ const DEFAULT_CONFIG = {
   SUB_TITLE: 'Graphics Design Masterclass',
   INSTRUCTOR_NAME: 'Olatunde Daniel',
   CURRENCY: 'NGN',
-  WHATSAPP_INVITE_URL: 'https://chat.whatsapp.com/invite/olatunde-masterclass-2026'
+  WHATSAPP_INVITE_URL: import.meta.env.VITE_WHATSAPP_INVITE_URL || 'https://bit.ly/4rjaE67'
 };
 
 export function AppProvider({ children }) {

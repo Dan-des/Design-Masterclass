@@ -305,7 +305,7 @@ async function handleVerify(req, res) {
       receiptNumber,
       amountPaid: tier.price,
       paidAt,
-      whatsappInviteUrl: process.env.WHATSAPP_INVITE_URL || 'https://chat.whatsapp.com/invite/olatunde-masterclass-2026'
+      whatsappInviteUrl: process.env.WHATSAPP_INVITE_URL || 'https://bit.ly/4rjaE67'
     });
 
     logEvent('PAYSTACK_ENROLLMENT_CONFIRMED', { transactionId, receiptNumber, tierId: tier.id });

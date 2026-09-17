@@ -150,7 +150,7 @@ export async function sendEnrollmentConfirmation({
         '1-on-1 Commercial Portfolio Review'
       ];
 
-  const inviteUrl = whatsappInviteUrl || 'https://chat.whatsapp.com/invite/olatunde-masterclass-2026';
+  const inviteUrl = whatsappInviteUrl || process.env.WHATSAPP_INVITE_URL || 'https://bit.ly/4rjaE67';
 
   // 2. Student Confirmation Email
   const studentSubject = `Enrollment Confirmed: Olatunde Daniel Masterclass (${receiptNumber})`;

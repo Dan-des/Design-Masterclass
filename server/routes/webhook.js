@@ -121,7 +121,7 @@ router.post('/paystack', async (req, res) => {
       receiptNumber,
       amountPaid: tier.price,
       paidAt,
-      whatsappInviteUrl: process.env.WHATSAPP_INVITE_URL || 'https://chat.whatsapp.com/invite/olatunde-masterclass-2026'
+      whatsappInviteUrl: process.env.WHATSAPP_INVITE_URL || 'https://bit.ly/4rjaE67'
     });
 
     logEvent('PAYSTACK_WEBHOOK_ENROLLMENT_CONFIRMED', {
