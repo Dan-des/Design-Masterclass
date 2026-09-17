@@ -7,13 +7,21 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { connectDatabase } from './services/database.js';
 import paymentRouter from './routes/payment.js';
 import webhookRouter from './routes/webhook.js';
 import supportRouter from './routes/support.js';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const app = express();
 const PORT = process.env.PORT || 4000;
+
+// Serve static assets (e.g. /logo.png)
+app.use(express.static(path.join(__dirname, 'public')));
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
 const isAllowedOrigin = (origin) => {

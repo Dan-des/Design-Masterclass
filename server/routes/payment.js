@@ -526,9 +526,12 @@ async function handleReceiptView(req, res) {
   </div>
   <div class="receipt-paper">
     <div class="header">
-      <div>
-        <h1>Olatunde Daniel</h1>
-        <p>Graphics Design Masterclass &bull; Official Payment Receipt</p>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <img src="/logo.png" alt="Olatunde Daniel" width="40" height="40" style="border-radius: 8px; display: block;" />
+        <div>
+          <h1>Olatunde Daniel</h1>
+          <p>Graphics Design Masterclass &bull; Official Payment Receipt</p>
+        </div>
       </div>
       <div style="text-align: right;">
         <span class="status-badge">Paid &amp; Verified</span>

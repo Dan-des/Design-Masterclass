@@ -214,25 +214,47 @@ export async function sendEnrollmentConfirmation({
 /**
  * Sends support acknowledgment to student and alert to owner.
  */
+function getLogoUrl() {
+  if (process.env.LOGO_URL) return process.env.LOGO_URL;
+  const backendBase = process.env.BACKEND_URL || (process.env.NODE_ENV === 'production' ? 'https://olatunde-daniel-api.onrender.com' : 'http://10.220.254.8:4000');
+  return `${backendBase}/logo.png`;
+}
+
+/**
+ * Sends support acknowledgment to student and alert to owner.
+ */
 export async function sendSupportAcknowledgment({ toEmail, toName, ticketId, message }) {
+  const logoUrl = getLogoUrl();
   const studentSubject = `Support Ticket Received: [${ticketId}]`;
   const studentHtml = `
-    <div style="font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif; background: #0a0a0a; color: #fff; padding: 20px; border-radius: 8px; max-width: 520px; margin: 0 auto;">
-      <h2 style="color: #facc15; margin-top: 0; font-size: 16px;">Support Ticket Received</h2>
+    <div style="font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif; background: #0a0a0a; color: #fff; padding: 20px; border-radius: 8px; max-width: 520px; margin: 0 auto; border: 1px solid #222222;">
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid #222222;">
+        <img src="${logoUrl}" alt="OD" width="36" height="36" style="display: block; width: 36px; height: 36px; border-radius: 8px; border: 0;" />
+        <div>
+          <h2 style="color: #facc15; margin: 0; font-size: 15px;">Support Ticket Received</h2>
+          <span style="font-size: 11px; color: #888888;">Olatunde Daniel Masterclass Support</span>
+        </div>
+      </div>
       <p style="font-size: 13px;">Hello ${toName},</p>
       <p style="font-size: 12.5px; color: #ccc;">We received your inquiry (Ticket ID: <strong>${ticketId}</strong>). Our support desk will reach out to you via this email within 24 hours.</p>
       <div style="background: #171717; padding: 14px; border-radius: 6px; border-left: 3px solid #facc15; margin: 16px 0;">
         <p style="margin: 0; color: #ccc; font-size: 12px;">"${message || 'Inquiry logged'}"</p>
       </div>
       <hr style="border: 0; border-top: 1px solid #333; margin: 18px 0;" />
-      <p style="color: #666; font-size: 11px;">Olatunde Daniel Masterclass &mdash; &copy;2026</p>
+      <p style="color: #666; font-size: 11px; text-align: center;">Olatunde Daniel Masterclass &mdash; &copy;2026</p>
     </div>
   `;
 
   const adminSubject = `New Support Ticket: [${ticketId}] from ${toName}`;
   const adminHtml = `
-    <div style="font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif; background: #0a0a0a; color: #fff; padding: 20px; border-radius: 8px; max-width: 520px; margin: 0 auto;">
-      <h2 style="color: #f87171; margin-top: 0; font-size: 16px;">New Support Ticket (${ticketId})</h2>
+    <div style="font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif; background: #0a0a0a; color: #fff; padding: 20px; border-radius: 8px; max-width: 520px; margin: 0 auto; border: 1px solid #222222;">
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid #222222;">
+        <img src="${logoUrl}" alt="OD" width="36" height="36" style="display: block; width: 36px; height: 36px; border-radius: 8px; border: 0;" />
+        <div>
+          <h2 style="color: #f87171; margin: 0; font-size: 15px;">New Support Ticket (${ticketId})</h2>
+          <span style="font-size: 11px; color: #888888;">Urgent Support Desk Alert</span>
+        </div>
+      </div>
       <p style="font-size: 13px;"><strong>From:</strong> ${toName} (${toEmail})</p>
       <div style="background: #171717; padding: 14px; border-radius: 6px; border-left: 3px solid #f87171; margin: 16px 0;">
         <p style="margin: 0; color: #e5e5e5; font-size: 12px; white-space: pre-wrap;">${message || 'No message body'}</p>
@@ -285,6 +307,7 @@ function buildStudentEmailHtml({
     : '<li style="padding: 3px 0; color: #d4d4d4;">Full Masterclass Access &amp; Curriculum Materials</li>';
 
   const backendBase = process.env.BACKEND_URL || (process.env.NODE_ENV === 'production' ? 'https://olatunde-daniel-api.onrender.com' : 'http://10.220.254.8:4000');
+  const logoUrl = getLogoUrl();
   const receiptPrintUrl = `${backendBase}/api/payment/receipt/${encodeURIComponent(receiptNumber)}?print=true`;
 
   return `<!DOCTYPE html>
@@ -309,8 +332,19 @@ function buildStudentEmailHtml({
 <body>
 <div class="container">
   <div class="header">
-    <h1>Olatunde Daniel</h1>
-    <p>Graphics Design Masterclass</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width: 100%; border-collapse: collapse;">
+      <tr>
+        <td align="center" style="padding-bottom: 8px;">
+          <img src="${logoUrl}" alt="Olatunde Daniel" width="48" height="48" style="display: block; width: 48px; height: 48px; margin: 0 auto; border-radius: 11px; border: 0;" />
+        </td>
+      </tr>
+      <tr>
+        <td align="center">
+          <h1 style="color: #0a0a0a; font-size: 16px; margin: 0 0 2px; letter-spacing: 0.04em; font-weight: 800; text-transform: uppercase;">Olatunde Daniel</h1>
+          <p style="color: #555555; margin: 0; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;">Graphics Design Masterclass</p>
+        </td>
+      </tr>
+    </table>
   </div>
   <div class="body">
     <div class="greeting">Welcome to the Cohort, ${toName}!</div>
@@ -441,6 +475,7 @@ function buildAdminEmailHtml({
   formattedDate
 }) {
   const whatsappClean = (whatsapp || '').replace(/[^0-9]/g, '');
+  const logoUrl = getLogoUrl();
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -453,9 +488,18 @@ function buildAdminEmailHtml({
   <div style="max-width: 480px; width: 100%; margin: 0 auto; background: #111111; border: 1px solid #282828; border-radius: 8px; padding: 14px; box-sizing: border-box;">
     
     <!-- Admin Header -->
-    <div style="border-bottom: 1px solid #222222; padding-bottom: 10px; margin-bottom: 12px;">
-      <h2 style="color: #facc15; margin: 0 0 3px; font-size: 15px; letter-spacing: 0.02em;">New Student Enrolled</h2>
-      <p style="color: #888888; font-size: 11px; margin: 0;">Verified purchase completed via Paystack.</p>
+    <div style="border-bottom: 1px solid #222222; padding-bottom: 12px; margin-bottom: 12px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="width: 44px; vertical-align: middle; padding-right: 12px;">
+            <img src="${logoUrl}" alt="OD" width="40" height="40" style="display: block; width: 40px; height: 40px; border-radius: 9px; border: 0;" />
+          </td>
+          <td style="vertical-align: middle;">
+            <h2 style="color: #facc15; margin: 0 0 3px; font-size: 15px; letter-spacing: 0.02em;">New Student Enrolled</h2>
+            <p style="color: #888888; font-size: 11px; margin: 0;">Verified purchase completed via Paystack.</p>
+          </td>
+        </tr>
+      </table>
     </div>
 
     <!-- Student Information Structured Card -->

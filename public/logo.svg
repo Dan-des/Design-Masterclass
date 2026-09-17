@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="256" height="256" fill="none">
+  <!-- Rounded dark container -->
+  <rect x="2" y="2" width="36" height="36" rx="9" fill="#0d0d0d" stroke="#262626" stroke-width="1" />
+  
+  <!-- Subtle gold accent border -->
+  <rect x="4" y="4" width="32" height="32" rx="7" stroke="#facc15" stroke-width="1.2" stroke-opacity="0.4" />
+  
+  <!-- Brand Emblem Monogram -->
+  <g transform="translate(4, 3)">
+    <!-- "D" Arc -->
+    <path
+      d="M8 7H16C20.4183 7 24 10.5817 24 15C24 19.4183 20.4183 23 16 23H8V7Z"
+      stroke="#facc15"
+      stroke-width="2.2"
+      stroke-linejoin="round"
+    />
+    <!-- Center Focal Point -->
+    <circle cx="16" cy="15" r="3" fill="#facc15" />
+    <!-- Grounding Baseline Accent -->
+    <line x1="8" y1="27" x2="24" y2="27" stroke="#facc15" stroke-width="2.2" stroke-linecap="round" />
+  </g>
+</svg>
