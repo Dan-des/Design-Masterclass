@@ -32,6 +32,10 @@ const isAllowedOrigin = (origin) => {
   if (/^https?:\/\/(localhost|127\.0\.0\.1|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+)(:\d+)?$/.test(origin)) {
     return true;
   }
+  // Allow custom domain and any subdomains (e.g. masterclass.olatundedaniel.name.ng, olatundedaniel.name.ng)
+  if (/^https?:\/\/([a-z0-9-]+\.)*olatundedaniel\.name\.ng$/.test(origin)) {
+    return true;
+  }
   // Allow Vercel, Netlify, and Render staging/production URLs
   if (/^https?:\/\/.*(onrender\.com|vercel\.app|netlify\.app)$/.test(origin)) {
     return true;
