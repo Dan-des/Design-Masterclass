@@ -5,10 +5,17 @@
  * - Live/Test mode: if PAYSTACK_SECRET_KEY starts with 'sk_'.
  */
 
+import https from 'https';
 import axios from 'axios';
 import crypto from 'crypto';
 
 const PAYSTACK_BASE_URL = 'https://api.paystack.co';
+
+const httpsAgent = new https.Agent({
+  keepAlive: true,
+  maxSockets: 30,
+  timeout: 10000
+});
 
 function getSecretKey() {
   return process.env.PAYSTACK_SECRET_KEY || null;
@@ -18,6 +25,7 @@ function getClient() {
   const secret = getSecretKey();
   return axios.create({
     baseURL: PAYSTACK_BASE_URL,
+    httpsAgent,
     headers: {
       Authorization: `Bearer ${secret}`,
       'Content-Type': 'application/json'

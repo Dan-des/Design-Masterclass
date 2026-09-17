@@ -149,15 +149,13 @@ router.post('/check-user', async (req, res) => {
     const emailCanonical = email ? normalizeEmail(email) : '';
     const whatsappDigits = whatsapp ? normalizePhone(whatsapp) : '';
 
-    let existingByEmail = null;
-    let existingByPhone = null;
+    const shouldCheckEmail = Boolean(emailCanonical && validateEmail(email));
+    const shouldCheckPhone = Boolean(whatsappDigits && validatePhone(whatsapp));
 
-    if (emailCanonical && validateEmail(email)) {
-      existingByEmail = await findEnrollmentByEmail(emailCanonical);
-    }
-    if (whatsappDigits && validatePhone(whatsapp)) {
-      existingByPhone = await findEnrollmentByPhone(whatsappDigits);
-    }
+    const [existingByEmail, existingByPhone] = await Promise.all([
+      shouldCheckEmail ? findEnrollmentByEmail(emailCanonical) : null,
+      shouldCheckPhone ? findEnrollmentByPhone(whatsappDigits) : null
+    ]);
 
     if (existingByEmail || existingByPhone) {
       return res.json({

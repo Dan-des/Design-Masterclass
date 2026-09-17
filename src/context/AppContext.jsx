@@ -8,7 +8,10 @@ import {
   getRateLimitStatus,
   recordCheckoutAttempt,
   resetRateLimit,
-  formatRemainingCooldown
+  formatRemainingCooldown,
+  validateName,
+  validateEmail,
+  validatePhone
 } from '../utils/security';
 import {
   KEYS,
@@ -108,19 +111,26 @@ export function AppProvider({ children }) {
     }, 4500);
   }, []);
 
-  // Real-time duplicate check querying live MongoDB database (no localStorage)
+  // Fast real-time duplicate check querying live MongoDB database (200ms responsive debounce)
   useEffect(() => {
     const email = (studentInfo.email || '').trim();
     const whatsapp = (studentInfo.whatsapp || '').trim();
 
-    if (!email.includes('@') && whatsapp.replace(/[^0-9]/g, '').length < 10) {
+    const hasValidEmail = email.includes('@') && email.includes('.') && email.indexOf('@') < email.lastIndexOf('.');
+    const cleanPhone = whatsapp.replace(/[^0-9]/g, '');
+    const hasValidPhone = cleanPhone.length >= 10;
+
+    if (!hasValidEmail && !hasValidPhone) {
       setIsUserExist(false);
       return;
     }
 
     const timer = setTimeout(async () => {
       try {
-        const res = await checkUserExists({ email, whatsapp });
+        const res = await checkUserExists({
+          email: hasValidEmail ? email : '',
+          whatsapp: hasValidPhone ? cleanPhone : ''
+        });
         if (res && res.exists) {
           setIsUserExist(true);
         } else {
@@ -129,7 +139,7 @@ export function AppProvider({ children }) {
       } catch {
         // Silently handle network interruption
       }
-    }, 450);
+    }, 200);
 
     return () => clearTimeout(timer);
   }, [studentInfo.email, studentInfo.whatsapp]);
@@ -225,8 +235,8 @@ export function AppProvider({ children }) {
     setIsSupportOpen(false);
   }, []);
 
-  // Step 1 Submission: Validate against backend MongoDB & rate limit
-  const submitStep1 = useCallback(async (formData, explicitTierId) => {
+  // Step 1 Submission: Instant validation and immediate transition to Step 2
+  const submitStep1 = useCallback((formData, explicitTierId) => {
     const activeTierId = explicitTierId || selectedTierId || 'pro';
     if (explicitTierId && explicitTierId !== selectedTierId) {
       setSelectedTierId(explicitTierId);
@@ -241,23 +251,27 @@ export function AppProvider({ children }) {
       return false;
     }
 
-    // 2. Query Live Database for Duplicates
-    try {
-      const serverCheck = await validateStudent(formData);
-      if (!serverCheck.success) {
-        if (serverCheck.error === 'User Exist') {
-          setIsUserExist(true);
-          showToast('User Exist', 'error');
-          return false;
-        }
-        showToast(serverCheck.error || 'Please provide valid enrollment information.', 'error');
-        return false;
-      }
-    } catch (err) {
-      console.warn('[Validation] Endpoint check warning:', err.message);
+    // 2. Instant Client Validation (0ms delay)
+    if (!validateName(fullName)) {
+      showToast('Please enter a valid student full name.', 'error');
+      return false;
+    }
+    if (!validateEmail(email)) {
+      showToast('Please enter a valid email address (e.g. name@domain.com).', 'error');
+      return false;
+    }
+    if (!validatePhone(whatsapp)) {
+      showToast('Please enter a valid phone number (at least 10 digits).', 'error');
+      return false;
     }
 
-    // 3. Rate Limit Counter: record attempt
+    // 3. Duplicate Block Guard
+    if (isUserExist) {
+      showToast('User Exist', 'error');
+      return false;
+    }
+
+    // 4. Rate Limit Counter: record attempt
     const attemptStatus = recordCheckoutAttempt();
     setRateLimitState(attemptStatus);
     if (attemptStatus.isLocked) {
@@ -275,9 +289,10 @@ export function AppProvider({ children }) {
       email
     });
 
+    // Instant transition to payment breakdown (0ms delay)
     setCheckoutStep(2);
     return true;
-  }, [transactionId, selectedTierId, showToast]);
+  }, [transactionId, selectedTierId, isUserExist, showToast]);
 
   // Step 2 Submission: Payment Execution with Database Duplicate Guard
   const submitPayment = useCallback(async (paymentMethod, claimedPrice, explicitTierId) => {
