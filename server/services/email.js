@@ -66,9 +66,14 @@ async function sendMail({ from, to, subject, html }) {
     const res = await driver.client.emails.send({
       from,
       to: Array.isArray(to) ? to : [to],
+      reply_to: ADMIN_EMAIL,
       subject,
       html
     });
+    if (res.error) {
+      console.warn(`[Email Dispatcher] Resend API notice for ${to}:`, res.error.message);
+      return { success: false, error: res.error.message, driver: 'resend' };
+    }
     return { success: true, messageId: res.data?.id, driver: 'resend' };
   }
 
@@ -76,6 +81,7 @@ async function sendMail({ from, to, subject, html }) {
     const info = await driver.client.sendMail({
       from,
       to: Array.isArray(to) ? to.join(', ') : to,
+      replyTo: ADMIN_EMAIL,
       subject,
       html
     });
