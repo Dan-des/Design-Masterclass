@@ -27,8 +27,8 @@ import { generateReceiptNumber } from '../utils/ids.js';
 
 const router = Router();
 
-// ── POST /api/webhook/paystack ────────────────────────────────────────────────
-router.post('/paystack', async (req, res) => {
+// ── POST /api/webhook/paystack & POST /api/webhook ────────────────────────────
+const handlePaystackWebhook = async (req, res) => {
   // Paystack requires immediate 200 acknowledgment before background processing
   res.sendStatus(200);
 
@@ -133,6 +133,9 @@ router.post('/paystack', async (req, res) => {
     console.error('[Paystack Webhook] Processing error:', err.message);
     logEvent('PAYSTACK_WEBHOOK_PROCESSING_ERROR', { error: err.message });
   }
-});
+};
+
+router.post('/paystack', handlePaystackWebhook);
+router.post('/', handlePaystackWebhook);
 
 export default router;
