@@ -53,6 +53,16 @@ export async function initiatePayment({ tierId, fullName, email, whatsapp, sessi
 }
 
 /**
+ * Checks live database if a user exists by email or whatsapp phone.
+ */
+export async function checkUserExists({ email, whatsapp }) {
+  return apiFetch('/api/payment/check-user', {
+    method: 'POST',
+    body: JSON.stringify({ email, whatsapp })
+  });
+}
+
+/**
  * Validates student credentials against backend criteria.
  */
 export async function validateStudent({ fullName, email, whatsapp }) {

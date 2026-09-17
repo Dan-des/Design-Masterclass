@@ -3,12 +3,8 @@ import { generateSessionId, generateTransactionId } from '../utils/crypto';
 import {
   TIERS,
   resolveTierPricing,
-  validateEmail,
-  validatePhone,
-  validateName,
   validateAppConfig,
   logSecurityEvent,
-  checkDuplicateEnrollment,
   getRateLimitStatus,
   recordCheckoutAttempt,
   resetRateLimit,
@@ -18,12 +14,9 @@ import {
   KEYS,
   getSessionStorage,
   setSessionStorage,
-  saveAbandonedLead,
-  loadAbandonedLead,
-  recordCompletedTransaction,
-  getCompletedTransactions
+  purgeAllLegacyStorage
 } from '../utils/storage';
-import { initiatePayment, verifyPayment, verifyStripeSession, validateStudent } from '../utils/api';
+import { initiatePayment, verifyPayment, validateStudent, checkUserExists } from '../utils/api';
 
 const AppContext = createContext(null);
 
@@ -45,20 +38,21 @@ export function AppProvider({ children }) {
     return fresh;
   });
 
-  // Cached student contact info so returning users do not have to retype info
-  const cachedLead = loadAbandonedLead();
-
   const [transactionId, setTransactionId] = useState(null);
   const [selectedTierId, setSelectedTierId] = useState('pro');
   const [checkoutStep, setCheckoutStep] = useState(1);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isSupportOpen, setIsSupportOpen] = useState(false);
 
-  const [studentInfo, setStudentInfo] = useState(() => ({
-    fullName: cachedLead?.fullName || '',
-    email: cachedLead?.email || '',
-    whatsapp: cachedLead?.whatsapp || ''
-  }));
+  // Student info always starts completely clean and fresh (zero localStorage caching)
+  const [studentInfo, setStudentInfo] = useState({
+    fullName: '',
+    email: '',
+    whatsapp: ''
+  });
+
+  // Dynamic duplicate status retrieved strictly from the live database
+  const [isUserExist, setIsUserExist] = useState(false);
 
   const [paymentStatus, setPaymentStatus] = useState('idle');
   const [paymentResult, setPaymentResult] = useState(null);
@@ -67,6 +61,13 @@ export function AppProvider({ children }) {
 
   // Rate limit and lockout state (5 uncompleted request lockout)
   const [rateLimitState, setRateLimitState] = useState(() => getRateLimitStatus());
+
+  // Purge any legacy localStorage user data on boot so testing starts 100% afresh
+  useEffect(() => {
+    purgeAllLegacyStorage();
+    validateAppConfig(DEFAULT_CONFIG);
+    logSecurityEvent('APP_BOOT_SUCCESS', { sessionId });
+  }, [sessionId]);
 
   // Real-time continuous sync for rate limit cooldown countdown
   useEffect(() => {
@@ -77,12 +78,6 @@ export function AppProvider({ children }) {
     const interval = setInterval(syncRateLimit, 1000);
     return () => clearInterval(interval);
   }, []);
-
-  // System validation on boot
-  useEffect(() => {
-    validateAppConfig(DEFAULT_CONFIG);
-    logSecurityEvent('APP_BOOT_SUCCESS', { sessionId });
-  }, [sessionId]);
 
   // Network state listener
   useEffect(() => {
@@ -113,7 +108,33 @@ export function AppProvider({ children }) {
     }, 4500);
   }, []);
 
-  // Handle payment return redirect (Paystack ?reference=... / ?trxref=... or Stripe ?session_id=...)
+  // Real-time duplicate check querying live MongoDB database (no localStorage)
+  useEffect(() => {
+    const email = (studentInfo.email || '').trim();
+    const whatsapp = (studentInfo.whatsapp || '').trim();
+
+    if (!email.includes('@') && whatsapp.replace(/[^0-9]/g, '').length < 10) {
+      setIsUserExist(false);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        const res = await checkUserExists({ email, whatsapp });
+        if (res && res.exists) {
+          setIsUserExist(true);
+        } else {
+          setIsUserExist(false);
+        }
+      } catch {
+        // Silently handle network interruption
+      }
+    }, 450);
+
+    return () => clearTimeout(timer);
+  }, [studentInfo.email, studentInfo.whatsapp]);
+
+  // Handle payment return redirect (Paystack ?reference=... / ?trxref=...)
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -122,7 +143,7 @@ export function AppProvider({ children }) {
     const status = params.get('status');
 
     if (paymentRef && status !== 'cancelled') {
-      // Clean query parameters from address bar immediately so refresh doesn't re-trigger
+      // Clean query parameters from address bar immediately
       window.history.replaceState({}, document.title, window.location.pathname);
 
       setIsCheckoutOpen(true);
@@ -140,24 +161,14 @@ export function AppProvider({ children }) {
               method: 'paystack'
             });
             if (res.studentInfo) {
-              setStudentInfo((prev) => ({
-                ...prev,
-                fullName: res.studentInfo.fullName || prev.fullName,
-                email: res.studentInfo.email || prev.email,
-                whatsapp: res.studentInfo.whatsapp || prev.whatsapp
-              }));
+              setStudentInfo({
+                fullName: res.studentInfo.fullName || '',
+                email: res.studentInfo.email || '',
+                whatsapp: res.studentInfo.whatsapp || ''
+              });
             }
             setPaymentStatus('completed');
             setCheckoutStep(3);
-
-            recordCompletedTransaction({
-              transactionId: res.transactionId || paymentRef,
-              sessionId,
-              tier: res.tier || TIERS.pro,
-              studentInfo: res.studentInfo || studentInfo,
-              paidAt: res.paidAt,
-              receiptNumber: res.receiptNumber
-            });
 
             resetRateLimit();
             setRateLimitState({ isLocked: false, remainingMs: 0, attempts: 0, maxAttempts: 5 });
@@ -177,23 +188,15 @@ export function AppProvider({ children }) {
       window.history.replaceState({}, document.title, window.location.pathname);
       showToast('Checkout was cancelled. You can complete your enrollment at any time.', 'info');
     }
-  }, [sessionId, studentInfo, showToast]);
+  }, [showToast]);
 
-  // Real-time Abandoned Lead Capture
+  // Update student field in memory
   const updateStudentField = useCallback((field, value) => {
-    setStudentInfo((prev) => {
-      const updated = { ...prev, [field]: value };
-      saveAbandonedLead(updated);
-      return updated;
-    });
+    setStudentInfo((prev) => ({ ...prev, [field]: value }));
   }, []);
 
-  // Real-time duplicate check against completed transactions
-  const duplicateCheck = checkDuplicateEnrollment(studentInfo, getCompletedTransactions());
-
-  // Open Checkout Drawer cleanly for the selected tier (starts fresh at Step 1)
+  // Open Checkout Drawer cleanly for the selected tier
   const openCheckout = useCallback((tierId = 'pro') => {
-    // Check rate limit on opening
     const rateCheck = getRateLimitStatus();
     setRateLimitState(rateCheck);
 
@@ -206,7 +209,7 @@ export function AppProvider({ children }) {
     logSecurityEvent('CHECKOUT_OPENED', { tierId });
   }, []);
 
-  // Cancel / Close checkout drawer cleanly without side effects
+  // Cancel / Close checkout drawer
   const closeCheckout = useCallback(() => {
     if (paymentStatus === 'processing') return;
     setIsCheckoutOpen(false);
@@ -222,7 +225,7 @@ export function AppProvider({ children }) {
     setIsSupportOpen(false);
   }, []);
 
-  // Step 1 Submission: Validate inputs via backend, enforce duplicate guard & rate limit
+  // Step 1 Submission: Validate against backend MongoDB & rate limit
   const submitStep1 = useCallback(async (formData, explicitTierId) => {
     const activeTierId = explicitTierId || selectedTierId || 'pro';
     if (explicitTierId && explicitTierId !== selectedTierId) {
@@ -238,24 +241,15 @@ export function AppProvider({ children }) {
       return false;
     }
 
-    // 2. Duplicate Enrollment Guard (same email & name or phone number)
-    const history = getCompletedTransactions();
-    const dupCheck = checkDuplicateEnrollment(formData, history);
-    if (dupCheck.isDuplicate) {
-      showToast('User Exist', 'error');
-      logSecurityEvent('DUPLICATE_PURCHASE_FLAGGED', {
-        student: formData,
-        reason: dupCheck.reason,
-        matchedTxn: dupCheck.matchedTransactionId,
-        matchedReceipt: dupCheck.matchedReceiptNumber
-      });
-      return false;
-    }
-
-    // 3. Backend criteria validation (11-digit phone, domain structure e.g. @gmail.com)
+    // 2. Query Live Database for Duplicates
     try {
       const serverCheck = await validateStudent(formData);
       if (!serverCheck.success) {
+        if (serverCheck.error === 'User Exist') {
+          setIsUserExist(true);
+          showToast('User Exist', 'error');
+          return false;
+        }
         showToast(serverCheck.error || 'Please provide valid enrollment information.', 'error');
         return false;
       }
@@ -263,7 +257,7 @@ export function AppProvider({ children }) {
       console.warn('[Validation] Endpoint check warning:', err.message);
     }
 
-    // 4. Rate Limit Counter: record attempt
+    // 3. Rate Limit Counter: record attempt
     const attemptStatus = recordCheckoutAttempt();
     setRateLimitState(attemptStatus);
     if (attemptStatus.isLocked) {
@@ -275,9 +269,6 @@ export function AppProvider({ children }) {
     setTransactionId(currentTxnId);
     setStudentInfo({ fullName, email, whatsapp });
 
-    // Save lead snapshot
-    saveAbandonedLead({ fullName, email, whatsapp, tierId: activeTierId, txnId: currentTxnId });
-
     logSecurityEvent('STEP1_COMPLETED', {
       transactionId: currentTxnId,
       tierId: activeTierId,
@@ -288,7 +279,7 @@ export function AppProvider({ children }) {
     return true;
   }, [transactionId, selectedTierId, showToast]);
 
-  // Step 2 Submission: Payment Execution with Price Tamper, Duplicate Guard & Rate Limit
+  // Step 2 Submission: Payment Execution with Database Duplicate Guard
   const submitPayment = useCallback(async (paymentMethod, claimedPrice, explicitTierId) => {
     const activeTierId = explicitTierId || selectedTierId || 'pro';
     if (!isOnline) {
@@ -303,12 +294,9 @@ export function AppProvider({ children }) {
       return false;
     }
 
-    // Strict Duplicate Enrollment Guard
-    const history = getCompletedTransactions();
-    const dupCheck = checkDuplicateEnrollment(studentInfo, history);
-    if (dupCheck.isDuplicate) {
+    // Live Database Duplicate Guard
+    if (isUserExist) {
       showToast('User Exist', 'error');
-      logSecurityEvent('DUPLICATE_PURCHASE_FLAGGED', { studentInfo, reason: dupCheck.reason });
       setPaymentStatus('failed');
       return false;
     }
@@ -324,8 +312,7 @@ export function AppProvider({ children }) {
     setPaymentStatus('processing');
 
     try {
-      // Step A: Initiate payment with backend — server validates tier, checks duplicates,
-      // and creates the Paystack session (or confirms mock mode).
+      // Initiate payment with backend — checks MongoDB and creates Paystack session
       const initResult = await initiatePayment({
         tierId: activeTierId,
         fullName: studentInfo.fullName,
@@ -337,23 +324,23 @@ export function AppProvider({ children }) {
 
       if (!initResult.success) {
         setPaymentStatus('failed');
+        if (initResult.error === 'User Exist') {
+          setIsUserExist(true);
+        }
         showToast(initResult.error || 'Payment initialization failed. Please try again.', 'error');
         return false;
       }
 
-      // Step B: If live Paystack — redirect to hosted payment page.
-      // If mock mode — skip redirect and verify immediately.
+      // Live Paystack: redirect browser to hosted payment page
       if (!initResult.mock && initResult.authorizationUrl) {
-        // Live Paystack: redirect browser to hosted checkout.
-        // On return, the app reads ?ref=TXN-xxxxx from the URL and calls verifyPayment.
         window.location.href = initResult.authorizationUrl;
         return true;
       }
 
-      // Mock mode: verify immediately (no real redirect needed).
+      // Mock mode fallback: verify immediately
       const confirmTxnId = initResult.transactionId || transactionId;
       const verifyResult = await verifyPayment(confirmTxnId, {
-        tierId: selectedTierId,
+        tierId: activeTierId,
         fullName: studentInfo.fullName,
         whatsapp: studentInfo.whatsapp
       });
@@ -376,17 +363,6 @@ export function AppProvider({ children }) {
       setPaymentStatus('completed');
       setCheckoutStep(3);
 
-      // Record locally (for duplicate guard and receipt display)
-      recordCompletedTransaction({
-        transactionId: confirmTxnId,
-        sessionId,
-        tier: verification.tier,
-        studentInfo,
-        paidAt: verifyResult.paidAt,
-        receiptNumber: verifyResult.receiptNumber
-      });
-
-      // Clear rate limit on confirmed payment
       resetRateLimit();
       setRateLimitState({ isLocked: false, remainingMs: 0, attempts: 0, maxAttempts: 5 });
 
@@ -398,13 +374,15 @@ export function AppProvider({ children }) {
       showToast('Payment authorization interrupted. Please try again.', 'error');
       return false;
     }
-  }, [isOnline, selectedTierId, transactionId, sessionId, studentInfo, showToast]);
+  }, [isOnline, selectedTierId, transactionId, sessionId, studentInfo, isUserExist, showToast]);
 
-  // Restart / Reset checkout
+  // Restart / Reset checkout cleanly
   const resetCheckout = useCallback(() => {
     setCheckoutStep(1);
     setPaymentStatus('idle');
     setPaymentResult(null);
+    setStudentInfo({ fullName: '', email: '', whatsapp: '' });
+    setIsUserExist(false);
     const newTxn = generateTransactionId();
     setTransactionId(newTxn);
   }, []);
@@ -426,7 +404,7 @@ export function AppProvider({ children }) {
     isOnline,
     toast,
     rateLimitState,
-    duplicateCheck,
+    duplicateCheck: { isDuplicate: isUserExist, reason: isUserExist ? 'User Exist' : null },
     formatRemainingCooldown,
     openCheckout,
     closeCheckout,

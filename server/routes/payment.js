@@ -141,6 +141,37 @@ async function handleInitiate(req, res) {
 router.post('/initiate', handleInitiate);
 router.post('/create-checkout-session', handleInitiate);
 
+// ── POST /api/payment/check-user ──────────────────────────────────────────────
+router.post('/check-user', async (req, res) => {
+  try {
+    const { email, whatsapp } = req.body;
+    const emailCanonical = email ? normalizeEmail(email) : '';
+    const whatsappDigits = whatsapp ? normalizePhone(whatsapp) : '';
+
+    let existingByEmail = null;
+    let existingByPhone = null;
+
+    if (emailCanonical && validateEmail(email)) {
+      existingByEmail = await findEnrollmentByEmail(emailCanonical);
+    }
+    if (whatsappDigits && validatePhone(whatsapp)) {
+      existingByPhone = await findEnrollmentByPhone(whatsappDigits);
+    }
+
+    if (existingByEmail || existingByPhone) {
+      return res.json({
+        exists: true,
+        reason: existingByEmail ? 'email' : 'phone',
+        error: 'User Exist'
+      });
+    }
+
+    return res.json({ exists: false });
+  } catch (err) {
+    return res.status(500).json({ exists: false, error: err.message });
+  }
+});
+
 // ── POST /api/payment/validate-student ────────────────────────────────────────
 router.post('/validate-student', async (req, res) => {
   try {

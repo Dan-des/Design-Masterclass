@@ -1,12 +1,11 @@
 /**
- * Resilient storage manager for session persistence and abandoned lead capture.
+ * Minimal storage manager.
+ * User data and duplicate enrollment records are NEVER persisted in localStorage
+ * so cache clearing has zero effect — all checks retrieve directly from the live database.
  */
 
 const KEYS = {
-  SESSION_ID: 'todd_session_id',
-  CHECKOUT_STATE: 'todd_checkout_state',
-  ABANDONED_LEAD: 'todd_abandoned_lead',
-  TRANSACTION_HISTORY: 'todd_transaction_history'
+  SESSION_ID: 'todd_session_id'
 };
 
 export function getSessionStorage(key, fallback = null) {
@@ -15,7 +14,6 @@ export function getSessionStorage(key, fallback = null) {
     const data = window.sessionStorage.getItem(key);
     return data ? JSON.parse(data) : fallback;
   } catch (err) {
-    console.warn(`Storage read error for session key: ${key}`, err);
     return fallback;
   }
 }
@@ -25,7 +23,7 @@ export function setSessionStorage(key, value) {
     if (typeof window === 'undefined') return;
     window.sessionStorage.setItem(key, JSON.stringify(value));
   } catch (err) {
-    console.warn(`Storage write error for session key: ${key}`, err);
+    // ignore
   }
 }
 
@@ -34,72 +32,29 @@ export function removeSessionStorage(key) {
     if (typeof window === 'undefined') return;
     window.sessionStorage.removeItem(key);
   } catch (err) {
-    console.warn(`Storage delete error for session key: ${key}`, err);
+    // ignore
   }
 }
 
-export function getLocalStorage(key, fallback = null) {
-  try {
-    if (typeof window === 'undefined') return fallback;
-    const data = window.localStorage.getItem(key);
-    return data ? JSON.parse(data) : fallback;
-  } catch (err) {
-    console.warn(`Storage read error for local key: ${key}`, err);
-    return fallback;
-  }
-}
-
-export function setLocalStorage(key, value) {
+/**
+ * Completely purges all legacy local user data and test caches from the browser.
+ */
+export function purgeAllLegacyStorage() {
   try {
     if (typeof window === 'undefined') return;
-    window.localStorage.setItem(key, JSON.stringify(value));
+    const keysToRemove = [
+      'todd_abandoned_lead',
+      'todd_transaction_history',
+      'todd_checkout_state',
+      'od_rate_limit_state'
+    ];
+    for (const k of keysToRemove) {
+      window.localStorage.removeItem(k);
+      window.sessionStorage.removeItem(k);
+    }
   } catch (err) {
-    console.warn(`Storage write error for local key: ${key}`, err);
+    // ignore
   }
-}
-
-/**
- * Persists active checkout state for session resilience
- */
-export function saveCheckoutSession(state) {
-  setSessionStorage(KEYS.CHECKOUT_STATE, {
-    ...state,
-    lastUpdated: new Date().toISOString()
-  });
-}
-
-export function loadCheckoutSession() {
-  return getSessionStorage(KEYS.CHECKOUT_STATE, null);
-}
-
-/**
- * Caches student inputs in real-time to preserve leads even on abandonment
- */
-export function saveAbandonedLead(lead) {
-  setLocalStorage(KEYS.ABANDONED_LEAD, {
-    ...lead,
-    capturedAt: new Date().toISOString()
-  });
-}
-
-export function loadAbandonedLead() {
-  return getLocalStorage(KEYS.ABANDONED_LEAD, null);
-}
-
-/**
- * Stores verified transaction record
- */
-export function recordCompletedTransaction(transactionRecord) {
-  const history = getLocalStorage(KEYS.TRANSACTION_HISTORY, []);
-  history.push(transactionRecord);
-  setLocalStorage(KEYS.TRANSACTION_HISTORY, history);
-}
-
-/**
- * Retrieves all verified completed transaction records
- */
-export function getCompletedTransactions() {
-  return getLocalStorage(KEYS.TRANSACTION_HISTORY, []);
 }
 
 export { KEYS };
