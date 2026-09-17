@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
 import HeroSection from './components/hero/HeroSection';
@@ -12,6 +12,22 @@ import Toast from './components/common/Toast';
 import PrintableReceipt from './components/receipt/PrintableReceipt';
 
 export default function App() {
+  useEffect(() => {
+    if ('scrollRestoration' in history) {
+      history.scrollRestoration = 'manual';
+    }
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+
+    const handleBeforeUnload = () => {
+      window.scrollTo(0, 0);
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#0d0d0d] text-[#f3f4f6] relative flex flex-col selection:bg-yellow-400 selection:text-black">
       {/* Noise grain texture overlay */}
